@@ -1,0 +1,20 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Maven build output
+target/
+
+# JAR files
+*.jar
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.iml
+.vscode/

@@ -1,0 +1,5 @@
+name,email,other
+john,john@example.com,data1
+jane,jane.doe,data2
+bob,bob@test.org,data3
+alice,,data4

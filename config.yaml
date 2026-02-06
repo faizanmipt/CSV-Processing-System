@@ -1,0 +1,152 @@
+# =============================================================================
+# Centralized Configuration for CSV Processing System
+# =============================================================================
+# This file centralizes all configuration for all microservices.
+# Each service references this file via environment variables or direct config.
+#
+# Hierarchy:
+# 1. Environment Variables (highest priority)
+# 2. config.yaml (this file)
+# 3. application.properties defaults
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Application Settings (Shared)
+# -----------------------------------------------------------------------------
+app:
+  name: "csv-processing-system"
+  version: "1.0.0"
+  environment: "${APP_ENV:development}"
+
+# -----------------------------------------------------------------------------
+# Kafka Configuration (All Services)
+# -----------------------------------------------------------------------------
+kafka:
+  # Bootstrap servers - override via KAFKA_BOOTSTRAP_SERVERS env var
+  bootstrap_servers: "${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}"
+  
+  # Consumer settings
+  consumer:
+    group_id: "${KAFKA_CONSUMER_GROUP:csv-workers}"
+    auto_offset_reset: "earliest"
+    max_poll_records: 10
+    enable_auto_commit: false  # Manual commit for reliability
+  
+  # Producer settings
+  producer:
+    acks: "all"        # Wait for all replicas
+    retries: 5         # Number of retry attempts
+    retry_delay_ms: 100  # Initial delay between retries
+    retry_max_delay_ms: 10000  # Max delay between retries
+    batch_size: 16384
+    linger_ms: 1
+    buffer_memory: 33554432
+    compression: "lz4"
+    idempotence: true  # Enable exactly-once semantics
+    max_in_flight: 5    # Max requests per connection
+  
+  # Consumer retry settings (exponential backoff)
+  consumer_retry:
+    max_attempts: 5
+    initial_interval_ms: 1000
+    multiplier: 2.0
+    max_interval_ms: 10000
+  
+  # Topics configuration
+  topics:
+    jobs: "${KAFKA_TOPIC_JOBS:csv-jobs}"
+    jobs_dlq: "${KAFKA_TOPIC_DLQ:csv-jobs-dlq}"
+  
+  # DLQ Configuration
+  dlq:
+    enabled: true
+    topic: "${KAFKA_DLQ_TOPIC:csv-jobs-dlq}"
+    max_retries: 3
+    retry_interval_ms: 1000
+
+# -----------------------------------------------------------------------------
+# Common JobStore Service Configuration
+# -----------------------------------------------------------------------------
+job_status:
+  host: "${JOB_STATUS_HOST:common-jobstore-service}"
+  port: "${JOB_STATUS_PORT:8084}"
+  url: "http://${job_status.host}:${job_status.port}"
+
+# -----------------------------------------------------------------------------
+# File Storage Configuration (All Services)
+# -----------------------------------------------------------------------------
+storage:
+  base_dir: "${STORAGE_BASE_DIR:/data}"
+  raw_dir: "${STORAGE_RAW_DIR:/data/raw}"
+  processed_dir: "${STORAGE_PROCESSED_DIR:/data/processed}"
+
+# -----------------------------------------------------------------------------
+# Worker Service Specific Configuration
+# -----------------------------------------------------------------------------
+worker:
+  host: "0.0.0.0"
+  port: "${WORKER_PORT:8082}"
+  server_port: "${WORKER_PORT:8082}"
+  
+  # Batch processing settings
+  batch:
+    size: "${WORKER_BATCH_SIZE:5000}"
+  
+  # Concurrency settings
+  concurrency: "${WORKER_CONCURRENCY:8}"
+  
+  # Email validation pattern
+  email:
+    pattern: "${EMAIL_PATTERN:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}}"
+
+# -----------------------------------------------------------------------------
+# Upload Service Specific Configuration
+# -----------------------------------------------------------------------------
+upload:
+  host: "0.0.0.0"
+  port: "${UPLOAD_PORT:8081}"
+  server_port: "${UPLOAD_PORT:8081}"
+  
+  # File upload limits
+  max_file_size: "${UPLOAD_MAX_SIZE:100MB}"
+  allowed_content_types:
+    - "text/csv"
+    - "application/csv"
+    - "text/plain"
+
+# -----------------------------------------------------------------------------
+# Download Service Specific Configuration
+# -----------------------------------------------------------------------------
+download:
+  host: "0.0.0.0"
+  port: "${DOWNLOAD_PORT:8083}"
+  server_port: "${DOWNLOAD_PORT:8083}"
+
+# -----------------------------------------------------------------------------
+# API Gateway Configuration
+# -----------------------------------------------------------------------------
+api_gateway:
+  host: "0.0.0.0"
+  port: "${GATEWAY_PORT:8080}"
+  server_port: "${GATEWAY_PORT:8080}"
+
+# -----------------------------------------------------------------------------
+# Health & Actuator Configuration
+# -----------------------------------------------------------------------------
+management:
+  endpoints:
+    health:
+      show_details: "always"
+  health:
+    kafka:
+      enabled: true
+
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
+logging:
+  level:
+    root: "${LOG_ROOT:INFO}"
+    com.example: "${LOG_APP:DEBUG}"
+    org.springframework.kafka: "${LOG_KAFKA:INFO}"
+    org.apache.kafka: "${LOG_KAFKA_CLIENT:WARN}"
